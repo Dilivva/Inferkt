@@ -1,0 +1,7 @@
+headers = inferkt.h
+package = dilivva
+
+staticLibraries = libggml.a libggml-base.a libggml-blas.a libggml-cpu.a libinferkt.a libllama.a
+libraryPaths.ios_x64 = ../library/src/native/install/lib
+libraryPaths.ios_arm64 = ../library/src/native/install/lib
+libraryPaths.ios_simulator_arm64 = ../library/src/native/install/lib
