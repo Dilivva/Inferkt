@@ -46,6 +46,7 @@ class MainActivity : ComponentActivity() {
 
     init {
         System.loadLibrary("infer-android")
+        //CpuUtils.loadLibrary()
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {

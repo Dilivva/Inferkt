@@ -8,7 +8,7 @@
 
 #include "llama.h"
 
-using InferenceCallback = std::function<void(const char*, bool)>;
+using InferenceCallback = std::function<void(const char*, bool, void*)>;
 
 class Inference {
     llama_context* ctx = nullptr;
@@ -28,7 +28,7 @@ public:
     void setSamplingParams(float temp = 0.8f, float top_p = 0.95f, int32_t top_k = 40);
     bool setContextParams(int context_window = 512, int batch = 512);
     std::vector<int32_t> initializeBatch(const std::string& prompt);
-    void runInference(const std::vector<int32_t>& tokens, size_t max_tokens = 128, const InferenceCallback& callback = {}) const;
+    void runInference(const std::vector<int32_t>& tokens, size_t max_tokens = 128, const InferenceCallback& callback = {}, void* user_data = nullptr) const;
     void cleanUp() const;
 };
 

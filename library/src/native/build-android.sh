@@ -1,3 +1,7 @@
+#!/bin/bash
+
+cd ../androidMain/cpp
+ls
 cmake \
       -H/Users/ayodelekehinde/AndroidStudioProjects/InferKt/library/src/native \
       -DCMAKE_SYSTEM_NAME=Android \
@@ -9,15 +13,10 @@ cmake \
       -DANDROID_NDK=/Users/ayodelekehinde/Library/Android/sdk/ndk/26.1.10909125 \
       -DCMAKE_ANDROID_NDK=/Users/ayodelekehinde/Library/Android/sdk/ndk/26.1.10909125 \
       -DCMAKE_TOOLCHAIN_FILE=/Users/ayodelekehinde/Library/Android/sdk/ndk/26.1.10909125/build/cmake/android.toolchain.cmake \
-      -DCMAKE_MAKE_PROGRAM=/Users/ayodelekehinde/Library/Android/sdk/cmake/3.22.1/bin/ninja \
-      -DCMAKE_LIBRARY_OUTPUT_DIRECTORY=/Users/ayodelekehinde/AndroidStudioProjects/InferKt/library/build/intermediates/cxx/Release/331u1l71/obj/arm64-v8a \
-      -DCMAKE_RUNTIME_OUTPUT_DIRECTORY=/Users/ayodelekehinde/AndroidStudioProjects/InferKt/library/build/intermediates/cxx/Release/331u1l71/obj/arm64-v8a \
-      -B/Users/ayodelekehinde/AndroidStudioProjects/InferKt/library/.cxx/Release/331u1l71/arm64-v8a \
-      -GNinja \
-      -DLLAMA_BUILD_COMMON=ON \
-      -DBUILD_SHARED_LIBS=OFF \
-      -DGGML_LLAMAFILE=OFF \
-      -DGGML_OPENMP=OFF \
+      -DCMAKE_LIBRARY_OUTPUT_DIRECTORY=/Users/ayodelekehinde/AndroidStudioProjects/InferKt/library/build-android \
+      -DCMAKE_RUNTIME_OUTPUT_DIRECTORY=/Users/ayodelekehinde/AndroidStudioProjects/InferKt/library/build/build-android \
+      -DGGML_USE_CPU \
+      -DGGML_USE_CPU_AARCH64 \
       -B build-android \
       && \
       cmake --build build-android --config Release

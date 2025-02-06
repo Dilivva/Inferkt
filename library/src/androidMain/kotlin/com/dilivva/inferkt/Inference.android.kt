@@ -1,5 +1,7 @@
 package com.dilivva.inferkt
 
+import java.io.FileInputStream
+
 actual fun createInference(): Inference {
     return AndroidInference()
 }
@@ -22,6 +24,7 @@ class AndroidInference: Inference{
 
         }
         generate(inferPtr, prompt, maxTokens, callback)
+
     }
 
 }

@@ -1,18 +1,16 @@
+#!/bin/bash
+
+rm -rf build-ios \
+&& \
 cmake \
-      -G Xcode \
-      -DCMAKE_TOOLCHAIN_FILE=ios.toolchain.cmake \
-      -DGGML_METAL=OFF \
-      -DINFER_BUILD_APPLE=ON \
-      -DLLAMA_BUILD_TESTS=OFF \
-      -DLLAMA_BUILD_EXAMPLES=OFF \
-      -DLLAMA_BUILD_SERVER=OFF \
-      -DPLATFORM=OS64COMBINED \
-      -DLLAMA_BUILD_COMMON=ON \
-      -DBUILD_SHARED_LIBS=OFF \
-      -DGGML_LLAMAFILE=OFF \
-      -DGGML_OPENMP=OFF \
-      -B build \
+      -GXcode \
+      -DCMAKE_SYSTEM_NAME=iOS \
+      -DINFER_BUILD_APPLE=YES \
+      -DCMAKE_OSX_ARCHITECTURES="arm64" \
+      -DCMAKE_OSX_SYSROOT=iphoneos \
+      -DCMAKE_INSTALL_PREFIX=`pwd`/install \
+      -DCMAKE_XCODE_ATTRIBUTE_ONLY_ACTIVE_ARCH=NO \
+      -DCMAKE_IOS_INSTALL_COMBINED=YES \
+      -B build-ios \
       && \
-      cmake --build build --config Release \
-      && \
-      cmake --install build --config Release --prefix /Users/ayodelekehinde/AndroidStudioProjects/InferKt/library/src/native/install
+      cmake --build build-ios --config Release --target inferkt

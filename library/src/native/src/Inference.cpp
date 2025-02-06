@@ -4,13 +4,16 @@
 
 #include "Inference.h"
 
+#include <llama-model.h>
 #include <thread>
 #include <unistd.h>
 
 #include "common.h"
 
 Inference::Inference() {
-    llama_backend_init();
+    printf("Inference::Inference()\n");
+    //llama_backend_init();
+    ggml_backend_load_all();
 }
 
 Inference::~Inference() {
@@ -19,9 +22,11 @@ Inference::~Inference() {
 
 bool Inference::loadModel(const std::string &model_path, bool use_gpu) {
     // Step 1: Initialize model parameters
+    printf("Loading model...\n");
+    printf("%s\n", model_path.c_str());
     llama_model_params model_params = llama_model_default_params();
     if (use_gpu){
-        model_params.n_gpu_layers = 99;
+        model_params.n_gpu_layers = 10;
     } else{
         model_params.n_gpu_layers = 0;
     }
@@ -42,11 +47,11 @@ void Inference::setSamplingParams(const float temp, const float top_p, const int
     sparams.no_perf = true;
     smpl = llama_sampler_chain_init(sparams);
     llama_sampler_chain_add(smpl, llama_sampler_init_greedy());
-    // llama_sampler_chain_add(smpl, llama_sampler_init_min_p(0.05f, 1));
-    // llama_sampler_chain_add(smpl, llama_sampler_init_temp(temp));
-    // llama_sampler_chain_add(smpl, llama_sampler_init_top_p(top_p, 1));
-    // llama_sampler_chain_add(smpl, llama_sampler_init_top_k(top_k));
-    // llama_sampler_chain_add(smpl, llama_sampler_init_dist(LLAMA_DEFAULT_SEED));
+    llama_sampler_chain_add(smpl, llama_sampler_init_min_p(0.05f, 1));
+    llama_sampler_chain_add(smpl, llama_sampler_init_temp(temp));
+    llama_sampler_chain_add(smpl, llama_sampler_init_top_p(top_p, 1));
+    llama_sampler_chain_add(smpl, llama_sampler_init_top_k(top_k));
+    llama_sampler_chain_add(smpl, llama_sampler_init_dist(LLAMA_DEFAULT_SEED));
 }
 
 bool Inference::setContextParams(int context_window, int batch) {
@@ -106,7 +111,8 @@ std::vector<int32_t> Inference::initializeBatch(const std::string &prompt) {
 void Inference::runInference(
     const std::vector<int32_t> &tokens,
     size_t max_tokens,
-    const InferenceCallback &callback) const {
+    const InferenceCallback &callback,
+    void* user_data) const {
 
     for (auto token : tokens) {
         printf("%s",common_token_to_piece(ctx, token).c_str());
@@ -124,7 +130,7 @@ void Inference::runInference(
 
 
     if (llama_decode(ctx, *batch)) {
-        callback("", true);
+        callback("", true, user_data);
     }
 
     // Generate response tokens
@@ -134,20 +140,20 @@ void Inference::runInference(
 
         // Check for end of sequence
         if (llama_vocab_is_eog(vocab, new_token_id) || i == max_tokens) {
-            callback("", true);
+            callback("", true, user_data);
             break;
         }
 
         // Decode the token
         auto generated = common_token_to_piece(ctx, new_token_id);
-        callback(generated.c_str(), false);
+        callback(generated.c_str(), false, user_data);
 
         // Prepare batch for next token
         common_batch_clear(*batch);
         common_batch_add(*batch, new_token_id, i, { 0 }, true);
 
         if (llama_decode(ctx, *batch)) {
-            callback("", true);
+            callback("", true, user_data);
             break;
         }
     }
@@ -163,15 +169,17 @@ void Inference::cleanUp() const {
 
 
 
-//int main() {
-//    Inference inference;
-//    inference.loadModel("/Users/ayodelekehinde/Desktop/DevAssets/DeepSeek-R1-Distill-Qwen-1.5B-Q4_K_M.gguf");
-//    inference.setSamplingParams();
-//    inference.setContextParams();
-//    const char *prompt = "What is democracy?";
-//    auto tokens = inference.initializeBatch(prompt);
-//    auto on_generate = [](std::string result, bool is_complete) {
-//      printf(result.c_str());
-//    };
-//    inference.runInference(tokens, 30, on_generate);
-//}
+// int main() {
+//     printf("Inference\n");
+//     Inference inference;
+//
+//     inference.loadModel("/Users/ayodelekehinde/Desktop/DevAssets/gemma-2-2b-it-Q4_K_M.gguf", true);
+//     inference.setSamplingParams();
+//     inference.setContextParams();
+//     const char *prompt = "What is democracy?";
+//     auto tokens = inference.initializeBatch(prompt);
+//     auto on_generate = [](std::string result, bool is_complete) {
+//       printf(result.c_str());
+//     };
+//     inference.runInference(tokens, 200, on_generate);
+// }

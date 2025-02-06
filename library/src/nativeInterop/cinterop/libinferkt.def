@@ -1,7 +1,9 @@
 headers = inferkt.h
 package = dilivva
 
-staticLibraries = libggml.a libggml-base.a libggml-blas.a libggml-cpu.a libinferkt.a libllama.a
-libraryPaths.ios_x64 = ../library/src/native/install/lib
-libraryPaths.ios_arm64 = ../library/src/native/install/lib
-libraryPaths.ios_simulator_arm64 = ../library/src/native/install/lib
+staticLibraries =  libinferkt.a
+libraryPaths.ios_x64 = src/native/build-ios/Release-iphoneos
+libraryPaths.ios_arm64 = src/native/build-ios/Release-iphoneos
+libraryPaths.ios_simulator_arm64 = src/native/build-ios/Release-iphoneos
+
+linkerOpts = -ObjC -framework Accelerate -framework Metal -framework MetalKit -framework Foundation

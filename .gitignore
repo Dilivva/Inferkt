@@ -18,3 +18,6 @@ captures
 !*.xcworkspace/contents.xcworkspacedata
 **/xcshareddata/WorkspaceSettings.xcsettings
 library/src/native/install/
+library/src/native/build-ios
+/library/src/androidMain/cpp/build-android/
+/library/src/native/llama.cpp
