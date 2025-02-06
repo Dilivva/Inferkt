@@ -22,7 +22,6 @@ actual fun createInference(): Inference {
 class IosInference: Inference{
 
     private val inferencePtr = init()
-    private var globalOnGenerate: ((String) -> Unit)? = null
 
     override fun preloadModel(path: String): Boolean {
         return load_model(inferencePtr, path, true)
@@ -37,6 +36,7 @@ class IosInference: Inference{
             if (!isComplete && text != null){
                 val _onGenerateRef = userData?.asStableRef<(String) -> Unit>()?.get()
                 _onGenerateRef?.invoke(text)
+                println(text)
             }else{
                 println("Done")
             }

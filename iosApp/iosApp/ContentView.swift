@@ -10,34 +10,39 @@ struct ContentView: View {
     let inference = Inference_iosKt.createInference()
     var body: some View {
         VStack {
-            Button("Select File") {
-                showPicker = true
-            }
-            .sheet(isPresented: $showPicker) {
-                DocumentPicker { url in
-                    // Access the file's absolute path
-                    filePath = url.path
-                    print("Path: \(filePath)")
-                    // Load the file's content
-                    
+            ChatView(
+                inference: inference,
+                isModelLoaded: $isModelLoaded
+            )
+            
+            if !isModelLoaded {
+                Button("Pick model") {
+                    showPicker = true
+                }
+                .sheet(isPresented: $showPicker) {
+                    DocumentPicker { url in
+                        // Access the file's absolute path
+                        filePath = url.path
+                        print("Path: \(filePath)")
+                        // Load the file's content
+                        
+                    }
+                }
+                if !filePath.isEmpty{
+                    Button("Load model") {
+                        isModelLoaded = inference.preloadModel(path: filePath)
+                        print("Model loaded: \(isModelLoaded)")
+                    }
                 }
             }
             
             
-            Text("Path: \(filePath)")
-            Text("Content: \(fileContent)")
-            if !filePath.isEmpty{
-                Button("Load model") {
-                    isModelLoaded = inference.preloadModel(path: filePath)
-                    print("Model loaded: \(isModelLoaded)")
-                }
-            }
-            if isModelLoaded{
-                Button("Test Generation") {
-                    inference.generate(prompt: "What is democracy", maxTokens: 100, onGenerate: { text in print(text) })
-                    print("Model loaded: \(isModelLoaded)")
-                }
-            }
+//            if isModelLoaded{
+//                Button("Test Generation") {
+//                    inference.generate(prompt: "What is democracy", maxTokens: 100, onGenerate: { text in print(text) })
+//                    print("Model loaded: \(isModelLoaded)")
+//                }
+//            }
         }
     }
 }

@@ -12,8 +12,7 @@
 
 Inference::Inference() {
     printf("Inference::Inference()\n");
-    //llama_backend_init();
-    ggml_backend_load_all();
+    llama_backend_init();
 }
 
 Inference::~Inference() {
@@ -169,17 +168,17 @@ void Inference::cleanUp() const {
 
 
 
-// int main() {
-//     printf("Inference\n");
-//     Inference inference;
-//
-//     inference.loadModel("/Users/ayodelekehinde/Desktop/DevAssets/gemma-2-2b-it-Q4_K_M.gguf", true);
-//     inference.setSamplingParams();
-//     inference.setContextParams();
-//     const char *prompt = "What is democracy?";
-//     auto tokens = inference.initializeBatch(prompt);
-//     auto on_generate = [](std::string result, bool is_complete) {
-//       printf(result.c_str());
-//     };
-//     inference.runInference(tokens, 200, on_generate);
-// }
+ // int main() {
+ //     printf("Inference\n");
+ //     Inference inference;
+ //
+ //     inference.loadModel("/Users/ayodelekehinde/Desktop/DevAssets/gemma-2-2b-it-Q4_K_M.gguf", false);
+ //     inference.setSamplingParams();
+ //     inference.setContextParams();
+ //     const char *prompt = "What is democracy?";
+ //     auto tokens = inference.initializeBatch(prompt);
+ //     auto on_generate = [](std::string result, bool is_complete, void* user_data) {
+ //       printf(result.c_str());
+ //     };
+ //     inference.runInference(tokens, 200, on_generate);
+ // }
