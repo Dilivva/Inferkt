@@ -19,9 +19,12 @@ struct ChatMessage: Identifiable {
 struct ChatView: View {
     let inference: Inference
     @Binding var isModelLoaded: Bool
+    @Binding var progress: Float
+    
     
     @State private var messages: [ChatMessage] = []
     @State private var inputText: String = ""
+    @State private var isGenerating: Bool = false
     
     var body: some View {
         VStack {
@@ -69,19 +72,37 @@ struct ChatView: View {
                     .textFieldStyle(RoundedBorderTextFieldStyle())
                     .frame(minHeight: CGFloat(40))
                 
-                
-                Button(action: sendMessage) {
-                    Text("Send")
-                        .bold()
-                        .padding(.horizontal)
-                        .padding(.vertical, 8)
-                        .background(Color.green)
-                        .foregroundColor(.white)
-                        .cornerRadius(8)
+                if isGenerating {
+                    Button(action: stop) {
+                        Text("Stop")
+                            .bold()
+                            .padding(.horizontal)
+                            .padding(.vertical, 8)
+                            .background(Color.green)
+                            .foregroundColor(.white)
+                            .cornerRadius(8)
+                    }
+                }else{
+                    Button(action: sendMessage) {
+                        Text("Send")
+                            .bold()
+                            .padding(.horizontal)
+                            .padding(.vertical, 8)
+                            .background(Color.green)
+                            .foregroundColor(.white)
+                            .cornerRadius(8)
+                    }
                 }
             }
             .padding()
+//            ProgressView(value: progress)
+//                .progressViewStyle(LinearProgressViewStyle())
+//                .padding()
         }
+    }
+    
+    func stop(){
+        inference.cancelGeneration()
     }
     
     // Function to handle sending a message.
@@ -95,34 +116,35 @@ struct ChatView: View {
         let userMessage = ChatMessage(text: inputText, isUser: true)
         messages.append(userMessage)
         
-        var botMessage = ChatMessage(text: "Loading..", isUser: false)
+        var botMessage = ChatMessage(text: "Loading..\n\n", isUser: false)
         messages.append(botMessage)
         
         let botMessageIndex = messages.count - 1
         let prompt = inputText
         inputText = ""
         Task {
-                print("Gene")
-                inference.generate(
-                    prompt: prompt,
-                    maxTokens: 100,
-                    onGenerate: { text in
-                        // Make sure updates to UI state happen on the main actor.
-                        Task { @MainActor in
-                            messages[botMessageIndex].text += text
+            print("Gene")
+            inference.chat(
+                prompt: prompt,
+                maxTokens: 100,
+                onGenerate: { event in
+                    // Make sure updates to UI state happen on the main actor.
+                    Task { @MainActor in
+                        switch event{
+                        case let generating as GenerationEventGenerating:
+                            isGenerating = true
+                            messages[botMessageIndex].text += generating.text
+                        case let error as GenerationEventError:
+                            isGenerating = false
+                            print("Error: \(error.error)")
+                        case is GenerationEventGenerated:
+                            isGenerating = false
+                        default:
+                            print("None")
                         }
                     }
-                )
+                }
+            )
         }
-
-    
-
-        
-        // Simulate an echo response after a short delay.
-//        DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
-//            let responseMessage = ChatMessage(text: "Echo: \(userMessage.text)", isUser: false)
-//            
-//            messages.append(responseMessage)
-//        }
     }
 }

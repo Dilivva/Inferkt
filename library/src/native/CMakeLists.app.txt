@@ -1,0 +1,85 @@
+cmake_minimum_required(VERSION 3.22.1)
+
+project(inferkt C CXX)
+
+message("Dir ${CMAKE_CURRENT_SOURCE_DIR}")
+
+find_library(METAL_LIBRARY Metal REQUIRED)
+find_library(FOUNDATION_LIBRARY Foundation REQUIRED)
+find_library(METALKIT_LIBRARY MetalKit REQUIRED)
+find_library(ACCELERATE_LIBRARY Accelerate REQUIRED)
+
+
+set(SOURCES
+        src/inferkt.cpp
+        src/Inference.cpp
+        src/ggml.c
+        src/ggml-alloc.c
+        src/ggml-backend.cpp
+        src/ggml-backend-reg.cpp
+        src/ggml-cpu.c
+        src/ggml-cpu.cpp
+        src/ggml-cpu-aarch64.cpp
+        src/ggml-cpu-quants.c
+        src/ggml-cpu-traits.cpp
+        src/ggml-opt.cpp
+        src/ggml-threading.cpp
+        src/ggml-quants.c
+        src/gguf.cpp
+        src/log.cpp
+        src/llama-impl.cpp
+        src/llama-grammar.cpp
+        src/llama-sampling.cpp
+        src/llama-vocab.cpp
+        src/llama-adapter.cpp
+        src/llama-chat.cpp
+        src/llama-context.cpp
+        src/llama-kv-cache.cpp
+        src/llama-arch.cpp
+        src/llama-batch.cpp
+        src/llama-cparams.cpp
+        src/llama-hparams.cpp
+        src/llama.cpp
+        src/llama-model.cpp
+        src/llama-model-loader.cpp
+        src/llama-mmap.cpp
+        src/llama-vocab.cpp
+        src/sampling.cpp
+        src/unicode-data.cpp
+        src/unicode.cpp
+        src/sgemm.cpp
+        src/common.cpp
+        src/amx/amx.cpp
+        src/amx/mmq.cpp
+        src/ggml-metal.m
+        src/ggml-metal.metal
+)
+
+
+add_executable(inferkt ${SOURCES})
+
+
+target_include_directories(inferkt PUBLIC include)
+
+target_compile_features(inferkt PRIVATE cxx_std_17)
+
+
+
+
+
+
+target_sources(inferkt PRIVATE ${METALLIB_EMBED_ASM})
+target_link_libraries(inferkt PRIVATE
+        ${ACCELERATE_LIBRARY}
+        ${FOUNDATION_LIBRARY}
+        ${METAL_LIBRARY}
+        ${METALKIT_LIBRARY}
+)
+
+target_compile_options(inferkt PRIVATE
+            -DGGML_USE_CPU
+            -DGGML_USE_ACCELERATE
+#            -DGGML_METAL_EMBED_LIBRARY
+            -DGGML_USE_METAL
+            -pthread
+)

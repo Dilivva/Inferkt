@@ -12,36 +12,77 @@ extern "C" long init() {
     return reinterpret_cast<long>(inference);
 }
 
-extern "C" bool load_model(const long inference_ptr, const char *file_path, bool use_gpu) {
+extern "C" bool load_model(long inference_ptr,
+                           const char* model_path,
+                           int number_of_gpu_layers,
+                           bool use_mmap,
+                           bool use_mlock,
+                           progress_callback callback,
+                           void *user_data) {
     const auto inference = reinterpret_cast<Inference *>(inference_ptr);
-    const auto is_loaded = inference->loadModel(file_path, use_gpu);
-    return is_loaded;
+    model_settings settings{
+        model_path,
+        number_of_gpu_layers,
+        use_mmap,
+        use_mlock,
+        callback,
+        user_data
+    };
+    return inference->load_model(settings);
 }
 
-extern "C" void set_sampling_params(const long inference_ptr, const float temp, const float top_p, const int32_t top_k) {
+extern "C" bool set_context_params(long inference_ptr, int context_length, int batch, int number_of_threads) {
     const auto inference = reinterpret_cast<Inference *>(inference_ptr);
-    inference->setSamplingParams(temp, top_p, top_k);
+    return inference->init_context(context_length, batch, number_of_threads);
 }
 
-extern "C" bool set_context_params(const long inference_ptr, const int context_window, const int batch) {
+extern "C" void set_sampling_params(long inference_ptr,
+                                    float temp,
+                                    float top_p,
+                                    float min_p,
+                                    int32_t top_k) {
     const auto inference = reinterpret_cast<Inference *>(inference_ptr);
-    return inference->setContextParams(context_window, batch);
+    sampling_settings settings{
+        temp,
+        top_p,
+        min_p,
+        top_k,
+    };
+    inference->set_sampling_params(settings);
 }
 
-void infer(const long inference_ptr, const char *prompt, const int max_generation_count, const InferenceCallback &callback) {
+void cxx_complete(const long inference_ptr, const char *prompt, const int max_generation_count, const InferenceCallback &callback) {
     const auto inference = reinterpret_cast<Inference *>(inference_ptr);
-    const std::vector<int32_t> tokens = inference->initializeBatch(prompt);
-    inference->runInference(tokens, max_generation_count, callback);
+    const std::vector<int32_t> tokens = inference->initialize_batch(prompt);
+    inference->completion(tokens, max_generation_count, callback);
 }
 
 extern "C" void clean_up(const long inference_ptr) {
     const auto inference = reinterpret_cast<Inference *>(inference_ptr);
-    inference->cleanUp();
+    inference->clean_up();
     delete inference;
 }
 
-extern "C" void generate(long inference_ptr, const char *prompt, int max_generation_count, GenerationCCallback callback, void* user_data) {
+extern "C" void complete(long inference_ptr, const char *prompt, int max_generation_count, GenerationCCallback callback, void* user_data) {
     const auto inference = reinterpret_cast<Inference *>(inference_ptr);
-    const std::vector<int32_t> tokens = inference->initializeBatch(prompt);
-    inference->runInference(tokens, max_generation_count, callback, user_data);
+    const std::vector<int32_t> tokens = inference->initialize_batch(prompt);
+    inference->completion(tokens, max_generation_count, callback, user_data);
 }
+
+extern "C" void cancel_inference(long inference_ptr){
+    const auto inference = reinterpret_cast<Inference *>(inference_ptr);
+    inference->cancel();
+}
+
+extern "C" void chat(long inference_ptr, const char *prompt, int max_generation_count, GenerationCCallback callback, void *user_data) {
+    const auto inference = reinterpret_cast<Inference *>(inference_ptr);
+    inference->chat(prompt, max_generation_count, callback, user_data);
+}
+
+extern "C" model_details get_model_details(const char* model_path) {
+    return Inference::get_model_details(model_settings{ model_path });
+}
+
+
+
+

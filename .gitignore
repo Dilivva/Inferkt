@@ -21,3 +21,4 @@ library/src/native/install/
 library/src/native/build-ios
 /library/src/androidMain/cpp/build-android/
 /library/src/native/llama.cpp
+/library/src/native/llama.cpp/.github/

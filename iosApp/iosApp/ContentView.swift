@@ -6,13 +6,15 @@ struct ContentView: View {
     @State private var fileContent: String = ""
     @State private var showPicker = false
     @State private var isModelLoaded = false
+    @State private var progress: Float = 0.0
     //let greet = Greeting().greet()
     let inference = Inference_iosKt.createInference()
     var body: some View {
         VStack {
             ChatView(
                 inference: inference,
-                isModelLoaded: $isModelLoaded
+                isModelLoaded: $isModelLoaded,
+                progress: $progress
             )
             
             if !isModelLoaded {
@@ -30,8 +32,24 @@ struct ContentView: View {
                 }
                 if !filePath.isEmpty{
                     Button("Load model") {
-                        isModelLoaded = inference.preloadModel(path: filePath)
-                        print("Model loaded: \(isModelLoaded)")
+                        Task{
+                            let modelSettings = ModelSettings(modelPath: filePath,
+                                                              numberOfGpuLayers: 20,
+                                                              useMmap: true,
+                                                              useMlock: true,
+                                                              numberOfThreads: -1,
+                                                              context: 2048,
+                                                              batchSize: 512)
+                            isModelLoaded = inference.preloadModel(
+                                modelSettings: modelSettings,
+                                progressCallback: { progress in
+                                print("Progress: \(progress)")
+
+                                    return true
+                                }
+                            )
+                            print("Model loaded: \(isModelLoaded)")
+                        }
                     }
                 }
             }

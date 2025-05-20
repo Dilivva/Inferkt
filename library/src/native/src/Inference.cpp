@@ -4,6 +4,11 @@
 
 #include "Inference.h"
 
+#include <gguf.h>
+#include <inferkt.h>
+#include <iostream>
+#include <llama-impl.h>
+#include <llama-kv-cache.h>
 #include <llama-model.h>
 #include <thread>
 #include <unistd.h>
@@ -16,61 +21,107 @@ Inference::Inference() {
 }
 
 Inference::~Inference() {
-    cleanUp();
+    clean_up();
 }
 
-bool Inference::loadModel(const std::string &model_path, bool use_gpu) {
-    // Step 1: Initialize model parameters
-    printf("Loading model...\n");
-    printf("%s\n", model_path.c_str());
+bool Inference::load_model(const model_settings &settings) {
     llama_model_params model_params = llama_model_default_params();
-    if (use_gpu){
-        model_params.n_gpu_layers = 10;
-    } else{
-        model_params.n_gpu_layers = 0;
-    }
+    model_params.n_gpu_layers = settings.number_of_gpu_layers;
+    model_params.use_mmap = settings.use_mmap;
+    model_params.use_mlock = settings.use_mlock;
+    model_params.progress_callback = settings.callback;
+    model_params.progress_callback_user_data = settings.progress_callback_user_data;
 
-    //model_params.use_mlock = true;
-
-    // Load the model
-    model = llama_model_load_from_file(model_path.c_str(), model_params);
+    model = llama_model_load_from_file(settings.model_path.c_str(), model_params);
     if (!model) {
+        clean_up();
         return false;
     }
-
     return true;
 }
 
-void Inference::setSamplingParams(const float temp, const float top_p, const int32_t top_k) {
-    auto sparams = llama_sampler_chain_default_params();
-    sparams.no_perf = true;
-    smpl = llama_sampler_chain_init(sparams);
-    llama_sampler_chain_add(smpl, llama_sampler_init_greedy());
-    llama_sampler_chain_add(smpl, llama_sampler_init_min_p(0.05f, 1));
-    llama_sampler_chain_add(smpl, llama_sampler_init_temp(temp));
-    llama_sampler_chain_add(smpl, llama_sampler_init_top_p(top_p, 1));
-    llama_sampler_chain_add(smpl, llama_sampler_init_top_k(top_k));
-    llama_sampler_chain_add(smpl, llama_sampler_init_dist(LLAMA_DEFAULT_SEED));
-}
+bool Inference::init_context(int context_length, int n_batch, int number_of_threads) {
 
-bool Inference::setContextParams(int context_window, int batch) {
     int max_threads = std::thread::hardware_concurrency();
     // Use 2 threads by default on 4-core devices, 4 threads on more cores
     int default_n_threads = max_threads == 4 ? 2 : std::min(4, max_threads);
     llama_context_params ctx_params = llama_context_default_params();
-    ctx_params.n_ctx = context_window;  // Context window size
-    ctx_params.n_batch = batch;
-    ctx_params.n_ubatch = batch;
+    ctx_params.n_ctx = context_length;  // Context window size
+    ctx_params.n_batch = n_batch;
+    ctx_params.n_ubatch = n_batch;
     ctx_params.n_threads = default_n_threads;
     ctx_params.n_threads_batch = default_n_threads;
 
     // Create context
     ctx = llama_init_from_model(model, ctx_params);
     vocab = llama_model_get_vocab(model);
+    formatted.resize(llama_n_ctx(ctx));
+
+    //n_keep = settings.context / 2;
+
     return ctx != nullptr && vocab != nullptr;
 }
 
-std::vector<int32_t> Inference::initializeBatch(const std::string &prompt) {
+model_details Inference::get_model_details(const model_settings &settings) {
+    model_details details{};
+    const gguf_init_params params = {
+        false,
+        nullptr,
+   };
+    gguf_context * ctx = gguf_init_from_file(settings.model_path.c_str(), params);
+    details.version = gguf_get_version(ctx);
+
+    const int n_kv = gguf_get_n_kv(ctx);
+
+    for (int i = 0; i < n_kv; ++i) {
+        const char * key = gguf_get_key(ctx, i);
+        if (strcmp(key, "general.architecture") == 0) {
+            details.architecture = gguf_kv_to_str(ctx, i).c_str();
+        }
+        if (strcmp(key, "general.name") == 0) {
+            details.name = gguf_kv_to_str(ctx, i).c_str();
+        }
+
+        if (strstr(key, "context_length") != nullptr) {
+            details.context_length = gguf_kv_to_str(ctx, i).c_str();
+        }
+    }
+    gguf_free(ctx);
+    return details;
+}
+
+void Inference::check_context_and_resize(int n_batch) {
+    int n_ctx = llama_n_ctx(ctx);
+    int n_ctx_used = llama_get_kv_cache_used_cells(ctx);
+    if (n_ctx_used + n_batch > n_ctx) {
+        const int n_left    = generated - n_keep;
+        const int n_discard = (n_left / 2);
+
+        llama_kv_cache_seq_rm (ctx, -1, 0, n_keep + n_discard);
+        //llama_kv_cache_seq_add(ctx, -1, n_keep + n_discard, generated,        -n_discard);
+        printf("Keep: %i\n", n_keep);
+        printf("Left: %i\n", n_left);
+        printf("Discard: %i\n", n_discard);
+
+        int n_ctx_used = llama_get_kv_cache_used_cells(ctx);
+        printf("Context left: %i\n", n_ctx_used);
+    }
+}
+
+void Inference::set_sampling_params(const sampling_settings settings) {
+    auto sparams = llama_sampler_chain_default_params();
+    sparams.no_perf = true;
+    smpl = llama_sampler_chain_init(sparams);
+    //llama_sampler_chain_add(smpl, llama_sampler_init_greedy());
+    llama_sampler_chain_add(smpl, llama_sampler_init_min_p(settings.min_p, 1));
+    llama_sampler_chain_add(smpl, llama_sampler_init_temp(settings.temp));
+    llama_sampler_chain_add(smpl, llama_sampler_init_top_p(settings.top_p, 1));
+    llama_sampler_chain_add(smpl, llama_sampler_init_top_k(settings.top_k));
+    llama_sampler_chain_add(smpl, llama_sampler_init_dist(LLAMA_DEFAULT_SEED));
+}
+
+
+std::vector<int32_t> Inference::initialize_batch(const std::string &prompt) {
     delete batch;
     std::vector<llama_token> tokens(llama_n_ctx(ctx));
     int n_tokens = llama_tokenize(
@@ -107,16 +158,13 @@ std::vector<int32_t> Inference::initializeBatch(const std::string &prompt) {
     return tokens;
 }
 
-void Inference::runInference(
+void Inference::completion(
     const std::vector<int32_t> &tokens,
     size_t max_tokens,
     const InferenceCallback &callback,
-    void* user_data) const {
+    void* user_data) {
 
-    for (auto token : tokens) {
-        printf("%s",common_token_to_piece(ctx, token).c_str());
-    }
-
+    generation_cancelled = false;
     common_batch_clear(*batch);
 
     // evaluate the initial prompt
@@ -129,36 +177,150 @@ void Inference::runInference(
 
 
     if (llama_decode(ctx, *batch)) {
-        callback("", true, user_data);
+        callback("", DECODE_ERROR, user_data);
     }
 
     // Generate response tokens
     for (size_t i = batch->n_tokens; i <= max_tokens; ++i) {
-
+        if (generation_cancelled){
+            callback("", END_OF_GENERATION, user_data);
+            break;
+        }
         llama_token new_token_id = llama_sampler_sample(smpl, ctx, -1);
 
         // Check for end of sequence
         if (llama_vocab_is_eog(vocab, new_token_id) || i == max_tokens) {
-            callback("", true, user_data);
+            callback("", END_OF_GENERATION, user_data);
             break;
         }
-
         // Decode the token
         auto generated = common_token_to_piece(ctx, new_token_id);
-        callback(generated.c_str(), false, user_data);
+        callback(generated.c_str(), GENERATING, user_data);
 
         // Prepare batch for next token
         common_batch_clear(*batch);
         common_batch_add(*batch, new_token_id, i, { 0 }, true);
 
         if (llama_decode(ctx, *batch)) {
-            callback("", true, user_data);
+            callback("", DECODE_ERROR, user_data);
             break;
         }
     }
 }
 
-void Inference::cleanUp() const {
+void Inference::chat(
+    const std::string &prompt,
+    size_t max_tokens,
+    const InferenceCallback &callback,
+    void *user_data) {
+
+    callback("", LOADING, user_data);
+    generation_cancelled = false;
+    const char * tmpl = llama_model_chat_template(model, nullptr);
+    messages.push_back({"user", strdup(prompt.c_str())});
+
+    int new_len = llama_chat_apply_template(tmpl, messages.data(), messages.size(), true, formatted.data(), formatted.size());
+
+    if (new_len > (int)formatted.size()) {
+        formatted.resize(new_len);
+        new_len = llama_chat_apply_template(tmpl, messages.data(), messages.size(), true, formatted.data(), formatted.size());
+    }
+    if (new_len < 0) {
+        fprintf(stderr, "failed to apply the chat template\n");
+    }
+
+    std::string formatted_prompt(formatted.begin() + prev_len, formatted.begin() + new_len);
+
+
+    auto generate = [&](const std::string & prompt) {
+
+        std::string response;
+
+        const bool is_first = llama_get_kv_cache_used_cells(ctx) == 0;
+
+        // tokenize the prompt
+        const int n_prompt_tokens = -llama_tokenize(vocab, prompt.c_str(), prompt.size(), NULL, 0, is_first, true);
+        std::vector<llama_token> prompt_tokens(n_prompt_tokens);
+        if (llama_tokenize(vocab, prompt.c_str(), prompt.size(), prompt_tokens.data(), prompt_tokens.size(), is_first, true) < 0) {
+            callback("", TOKENIZE_ERROR, user_data);
+        }
+
+
+        // prepare a batch for the prompt
+        llama_batch batch = llama_batch_get_one(prompt_tokens.data(), prompt_tokens.size());
+        llama_token new_token_id;
+        int count = 0;
+        while (true) {
+            if (generation_cancelled){
+                callback("", END_OF_GENERATION, user_data);
+                break;
+            }
+
+            check_context_and_resize(batch.n_tokens);
+
+            // check if we have enough space in the context to evaluate this batch
+            int n_ctx = llama_n_ctx(ctx);
+            int n_ctx_used = llama_get_kv_cache_used_cells(ctx);
+            if (n_ctx_used + batch.n_tokens > n_ctx) {
+                callback("", CONTEXT_EXCEEDED_ERROR, user_data);
+                break;
+            }
+
+            if (llama_decode(ctx, batch)) {
+                callback("", DECODE_ERROR, user_data);
+                break;
+            }
+
+            // sample the next token
+            new_token_id = llama_sampler_sample(smpl, ctx, -1);
+
+            // is it an end of generation?
+            if (llama_vocab_is_eog(vocab, new_token_id)) {
+                callback("", END_OF_GENERATION, user_data);
+                break;
+            }
+
+            // convert the token to a string, print it and add it to the response
+            char buf[256];
+            int n = llama_token_to_piece(vocab, new_token_id, buf, sizeof(buf), 0, true);
+            if (n < 0) {
+                callback("", DECODE_ERROR, user_data);
+                break;
+            }
+            std::string piece(buf, n);
+            callback(piece.c_str(), GENERATING, user_data);
+            count++;
+            response += piece;
+
+            if (count >= max_tokens && max_tokens > 0) {
+                callback("", END_OF_GENERATION, user_data);
+                break;
+            }
+            generated++;
+
+            batch = llama_batch_get_one(&new_token_id, 1);
+        }
+
+        return response;
+    };
+
+    std::string response = generate(formatted_prompt);
+
+
+    messages.push_back({"assistant", strdup(response.c_str())});
+    prev_len = llama_chat_apply_template(tmpl, messages.data(), messages.size(), false, nullptr, 0);
+
+}
+
+void Inference::cancel() {
+    generation_cancelled = true;
+}
+
+
+void Inference::clean_up() const {
+    for (auto & msg : messages) {
+        free(const_cast<char *>(msg.content));
+    }
     llama_backend_free();
     if (ctx) llama_free(ctx);
     if (model) llama_model_free(model);
@@ -168,17 +330,67 @@ void Inference::cleanUp() const {
 
 
 
- // int main() {
- //     printf("Inference\n");
- //     Inference inference;
- //
- //     inference.loadModel("/Users/ayodelekehinde/Desktop/DevAssets/gemma-2-2b-it-Q4_K_M.gguf", false);
- //     inference.setSamplingParams();
- //     inference.setContextParams();
- //     const char *prompt = "What is democracy?";
- //     auto tokens = inference.initializeBatch(prompt);
- //     auto on_generate = [](std::string result, bool is_complete, void* user_data) {
- //       printf(result.c_str());
- //     };
- //     inference.runInference(tokens, 200, on_generate);
- // }
+
+
+// int main() {
+//
+//
+//     //Inference inference;
+//     model_settings settings;
+//     settings.model_path = "/Users/ayodelekehinde/Desktop/DevAssets/DeepSeek-R1-Distill-Qwen-1.5B-Q4_K_M.gguf";
+//     settings.callback = [](float progress, void* user_data) -> bool {
+//         // Example: Print the progress
+//         std::cout << "Progress: " << progress * 100 << "%" << std::endl;
+//
+//         // End the process when progress reaches 100%
+//         return true;
+//     };
+//     settings.number_of_gpu_layers = 99;
+//     settings.use_mlock = false;
+//     settings.use_mmap = false;
+//
+//     auto inferptr = init();
+//     load_model(
+//         inferptr,
+//         settings.model_path.c_str(),
+//         settings.number_of_gpu_layers,
+//         settings.use_mmap,
+//         settings.use_mlock,
+//         settings.callback,
+//         nullptr
+//         );
+//
+//
+//     set_context_params(inferptr, -1, 4096, 512);
+//
+//     //inference.load_model(settings);
+//     sampling_settings sampling_settings;
+//     set_sampling_params(inferptr, sampling_settings.temp, sampling_settings.top_p, sampling_settings.min_p, sampling_settings.top_k);
+//
+//     auto on_generate = [](const char * result, generation_event event, void* user_data) {
+//         if (event == END_OF_GENERATION) {
+//             printf("Done..\n");
+//         }else if (event == CONTEXT_EXCEEDED_ERROR) {
+//             printf("Context exceeded error\n");
+//         }else if (event == DECODE_ERROR) {
+//             printf("Decode error\n");
+//         }
+//       printf(result);
+//     };
+//
+//     // auto model = "/Users/ayodelekehinde/Desktop/DevAssets/gemma-2-2b-it-Q4_K_M.gguf";
+//     // auto details = Inference::get_model_details(model_settings{ model });
+//
+//     while (true) {
+//         // get user input
+//         printf("\033[32m> \033[0m");
+//         std::string user;
+//         std::getline(std::cin, user);
+//
+//         if (user.empty()) {
+//             break;
+//         }
+//         chat(inferptr, user.c_str(), -1, on_generate, nullptr);
+//     }
+//
+//  }

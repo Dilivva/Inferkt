@@ -1,5 +1,6 @@
 headers = inferkt.h
 package = dilivva
+headerFilter = inferkt.h
 
 staticLibraries =  libinferkt.a
 libraryPaths.ios_x64 = src/native/build-ios/Release-iphoneos
