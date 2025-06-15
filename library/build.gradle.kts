@@ -27,7 +27,7 @@ kotlin {
         it.compilations.getByName("main") {
             cinterops {
                 val libinferkt by creating{
-                    val headerPath = "$projectDir/src/native/include"
+                    val headerPath = "$projectDir/src/native/src"
                     includeDirs(headerPath)
                 }
             }

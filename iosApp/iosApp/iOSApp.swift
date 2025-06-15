@@ -4,7 +4,11 @@ import SwiftUI
 struct iOSApp: App {
 	var body: some Scene {
 		WindowGroup {
-			ContentView()
+            if #available(iOS 17.0, *) {
+                ContentView()
+            } else {
+                Text("ios 17 below")
+            }
 		}
 	}
 }

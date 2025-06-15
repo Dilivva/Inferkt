@@ -1,7 +1,20 @@
 #!/bin/bash -e
 
-git submodule init
-git submodule update --recursive
+#git submodule init
+#git submodule update --recursive
+
+dirs=("src/ggml-cpu" "src/minja" "src/tools/mtmd")
+
+echo "--- Processing single-level directories ---"
+for dir_name in "${dirs[@]}"; do
+  if [ ! -d "$dir_name" ]; then
+    echo "Directory '$dir_name' does not exist. Creating it now..."
+    mkdir -p "$dir_name"
+  else
+    # If it already exists, print a message
+    echo "Directory '$dir_name' already exists."
+  fi
+done
 
 cp ./llama.cpp/include/llama.h ./src/llama.h
 cp ./llama.cpp/include/llama-cpp.h ./src/llama-cpp.h
@@ -17,8 +30,7 @@ cp ./llama.cpp/ggml/include/gguf.h ./src/gguf.h
 
 cp ./llama.cpp/ggml/src/ggml-metal/ggml-metal.m ./src/ggml-metal.m
 cp ./llama.cpp/ggml/src/ggml-metal/ggml-metal-impl.h ./src/ggml-metal-impl.h
-
-mkdir src/ggml-cpu
+cp ./llama.cpp/ggml/src/ggml-metal/ggml-metal.metal ./src/ggml-metal.metal
 
 cp ./llama.cpp/ggml/src/ggml-cpu/ggml-cpu.c ./src/ggml-cpu/ggml-cpu.c
 cp ./llama.cpp/ggml/src/ggml-cpu/ggml-cpu.cpp ./src/ggml-cpu/ggml-cpu.cpp
@@ -235,85 +247,88 @@ files_add_lm_prefix=(
   "./src/tools/mtmd/mtmd-helper.cpp"
 )
 
-# Loop through each file and run the sed commands
-OS=$(uname)
-for file in "${files_add_lm_prefix[@]}"; do
-  # Add prefix to avoid redefinition with other libraries using ggml like whisper.rn
-  if [ "$OS" = "Darwin" ]; then
-    sed -i '' 's/GGML_/LM_GGML_/g' $file
-    sed -i '' 's/ggml_/lm_ggml_/g' $file
-    sed -i '' 's/GGUF_/LM_GGUF_/g' $file
-    sed -i '' 's/gguf_/lm_gguf_/g' $file
-    sed -i '' 's/GGMLMetalClass/LMGGMLMetalClass/g' $file
-  else
-    sed -i 's/GGML_/LM_GGML_/g' $file
-    sed -i 's/ggml_/lm_ggml_/g' $file
-    sed -i 's/GGUF_/LM_GGUF_/g' $file
-    sed -i 's/gguf_/lm_gguf_/g' $file
-    sed -i 's/GGMLMetalClass/LMGGMLMetalClass/g' $file
-  fi
-done
+#echo "--- Seding ---"
+## Loop through each file and run the sed commands
+#OS=$(uname)
+#for file in "${files_add_lm_prefix[@]}"; do
+#  # Add prefix to avoid redefinition with other libraries using ggml like whisper.rn
+#  if [ "$OS" = "Darwin" ]; then
+#    sed -i '' 's/GGML_/LM_GGML_/g' $file
+#    sed -i '' 's/ggml_/lm_ggml_/g' $file
+#    sed -i '' 's/GGUF_/LM_GGUF_/g' $file
+#    sed -i '' 's/gguf_/lm_gguf_/g' $file
+#    sed -i '' 's/GGMLMetalClass/LMGGMLMetalClass/g' $file
+#  else
+#    sed -i 's/GGML_/LM_GGML_/g' $file
+#    sed -i 's/ggml_/lm_ggml_/g' $file
+#    sed -i 's/GGUF_/LM_GGUF_/g' $file
+#    sed -i 's/gguf_/lm_gguf_/g' $file
+#    sed -i 's/GGMLMetalClass/LMGGMLMetalClass/g' $file
+#  fi
+#done
+#
+#files_iq_add_lm_prefix=(
+#  "./src/ggml-quants.h"
+#  "./src/ggml-quants.c"
+#  "./src/ggml.c"
+#)
+#
+#for file in "${files_iq_add_lm_prefix[@]}"; do
+#  # Add prefix to avoid redefinition with other libraries using ggml like whisper.rn
+#  if [ "$OS" = "Darwin" ]; then
+#    sed -i '' 's/iq2xs_init_impl/lm_iq2xs_init_impl/g' $file
+#    sed -i '' 's/iq2xs_free_impl/lm_iq2xs_free_impl/g' $file
+#    sed -i '' 's/iq3xs_init_impl/lm_iq3xs_init_impl/g' $file
+#    sed -i '' 's/iq3xs_free_impl/lm_iq3xs_free_impl/g' $file
+#  else
+#    sed -i 's/iq2xs_init_impl/lm_iq2xs_init_impl/g' $file
+#    sed -i 's/iq2xs_free_impl/lm_iq2xs_free_impl/g' $file
+#    sed -i 's/iq3xs_init_impl/lm_iq3xs_init_impl/g' $file
+#    sed -i 's/iq3xs_free_impl/lm_iq3xs_free_impl/g' $file
+#  fi
+#done
+#
+#echo "Replacement completed successfully!"
 
-files_iq_add_lm_prefix=(
-  "./src/ggml-quants.h"
-  "./src/ggml-quants.c"
-  "./src/ggml.c"
-)
-
-for file in "${files_iq_add_lm_prefix[@]}"; do
-  # Add prefix to avoid redefinition with other libraries using ggml like whisper.rn
-  if [ "$OS" = "Darwin" ]; then
-    sed -i '' 's/iq2xs_init_impl/lm_iq2xs_init_impl/g' $file
-    sed -i '' 's/iq2xs_free_impl/lm_iq2xs_free_impl/g' $file
-    sed -i '' 's/iq3xs_init_impl/lm_iq3xs_init_impl/g' $file
-    sed -i '' 's/iq3xs_free_impl/lm_iq3xs_free_impl/g' $file
-  else
-    sed -i 's/iq2xs_init_impl/lm_iq2xs_init_impl/g' $file
-    sed -i 's/iq2xs_free_impl/lm_iq2xs_free_impl/g' $file
-    sed -i 's/iq3xs_init_impl/lm_iq3xs_init_impl/g' $file
-    sed -i 's/iq3xs_free_impl/lm_iq3xs_free_impl/g' $file
-  fi
-done
-
-echo "Replacement completed successfully!"
-
-yarn example
+#yarn example
 
 # Apply patch
-patch -p0 -d ./src < ./scripts/patches/common.h.patch
-patch -p0 -d ./src < ./scripts/patches/common.cpp.patch
-patch -p0 -d ./src < ./scripts/patches/chat.h.patch
-patch -p0 -d ./src < ./scripts/patches/chat.cpp.patch
-patch -p0 -d ./src < ./scripts/patches/log.cpp.patch
-patch -p0 -d ./src < ./scripts/patches/ggml-metal.m.patch
-patch -p0 -d ./src < ./scripts/patches/ggml.c.patch
-patch -p0 -d ./src < ./scripts/patches/ggml-quants.c.patch
-patch -p0 -d ./src < ./scripts/patches/llama-mmap.cpp.patch
-rm -rf ./src/*.orig
-
-if [ "$OS" = "Darwin" ]; then
-  # Build metallib (~2.6MB)
-  cd llama.cpp/ggml/src/ggml-metal
-
-  # Create a symbolic link to ggml-common.h in the current directory
-  ln -sf ../ggml-common.h .
-
-  xcrun --sdk iphoneos metal -c ggml-metal.metal -o ggml-metal.air -DGGML_METAL_USE_BF16=1
-  xcrun --sdk iphoneos metallib ggml-metal.air   -o ggml-llama.metallib
-  rm ggml-metal.air
-  mv ./ggml-llama.metallib ../../../../src/ggml-llama.metallib
-
-  xcrun --sdk iphonesimulator metal -c ggml-metal.metal -o ggml-metal.air -DGGML_METAL_USE_BF16=1
-  xcrun --sdk iphonesimulator metallib ggml-metal.air   -o ggml-llama.metallib
-  rm ggml-metal.air
-  mv ./ggml-llama.metallib ../../../../src/ggml-llama-sim.metallib
-
-  # Remove the symbolic link
-  rm ggml-common.h
-
+patch -p0 -d ./src < ./patches/common.h.patch
+patch -p0 -d ./src < ./patches/common.cpp.patch
+#patch -p0 -d ./src < ./patches/chat.h.patch
+#patch -p0 -d ./src < ./patches/chat.cpp.patch
+#patch -p0 -d ./src < ./patches/log.cpp.patch
+#patch -p0 -d ./src < ./patches/ggml-metal.m.patch
+#patch -p0 -d ./src < ./patches/ggml.c.patch
+#patch -p0 -d ./src < ./patches/ggml-quants.c.patch
+#patch -p0 -d ./src < ./patches/llama-mmap.cpp.patch
+#rm -rf ./src/*.orig
+#
+#echo "Generating MetalLib"
+#
+#if [ "$OS" = "Darwin" ]; then
+#  # Build metallib (~2.6MB)
+#  cd llama.cpp/ggml/src/ggml-metal
+#
+#  # Create a symbolic link to ggml-common.h in the current directory
+#  ln -sf ../ggml-common.h .
+#
+#  xcrun --sdk iphoneos metal -c ggml-metal.metal -o ggml-metal.air -DGGML_METAL_USE_BF16=1
+#  xcrun --sdk iphoneos metallib ggml-metal.air   -o ggml-llama.metallib
+#  rm ggml-metal.air
+#  mv ./ggml-llama.metallib ../../../../src/ggml-llama.metallib
+#
+#  xcrun --sdk iphonesimulator metal -c ggml-metal.metal -o ggml-metal.air -DGGML_METAL_USE_BF16=1
+#  xcrun --sdk iphonesimulator metallib ggml-metal.air   -o ggml-llama.metallib
+#  rm ggml-metal.air
+#  mv ./ggml-llama.metallib ../../../../src/ggml-llama-sim.metallib
+#
+#  # Remove the symbolic link
+#  rm ggml-common.h
+#
 #  cd -
 #
 #  # Generate .xcode.env.local in iOS example
 #  cd example/ios
 #  echo export NODE_BINARY=$(command -v node) > .xcode.env.local
-fi
+#fi

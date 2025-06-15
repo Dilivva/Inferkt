@@ -31,6 +31,7 @@ object CpuUtils {
 
     fun loadLibrary(){
         val cpuFeatures = getCpuFeatures()
+        println("Cpu: $cpuFeatures")
         val hasFp16 = cpuFeatures.contains("fp16") || cpuFeatures.contains("fphp")
         val hasDotProd = cpuFeatures.contains("dotprod") || cpuFeatures.contains("asimddp")
         val hasSve = cpuFeatures.contains("sve")
@@ -45,6 +46,12 @@ object CpuUtils {
         println("- isAtLeastArmV82: $isAtLeastArmV82")
         println("- isAtLeastArmV84: $isAtLeastArmV84")
 
+        if (hasFp16 && hasDotProd && isAtLeastArmV82){
+            System.loadLibrary("inferkt_v8_2")
+            println("Loaded omogbon")
+            return
+        }
+
         if (isArm64V8a()) {
             if (hasDotProd && hasI8mm) {
                 println("Loading v8_2_dotprod_i8mm.so")
@@ -53,17 +60,17 @@ object CpuUtils {
                 println("Loading v8_2_dotprod.so")
                 System.loadLibrary("inferkt_v8_2_dotprod")
             } else if (hasI8mm) {
-                println("Loading v8_2_i8mm.so");
+                println("Loading v8_2_i8mm.so")
                 System.loadLibrary("inferkt_v8_2_i8mm")
             } else if (hasFp16) {
-                println("Loading v8_2.so");
+                println("Loading v8_2.so")
                 System.loadLibrary("inferkt_v8_2")
             } else {
-                println("Loading default v8.so");
+                println("Loading default v8.so")
                 System.loadLibrary("inferkt_v8")
             }
         } else if (isX86_64()) {
-            println("Loading x86_64.so");
+            println("Loading x86_64.so")
             System.loadLibrary("inferkt_x86_64")
         } else {
             println("Loading default .so")

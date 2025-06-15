@@ -1,72 +1,34 @@
 import SwiftUI
 import library
 
+@available(iOS 17.0, *)
 struct ContentView: View {
-    @State private var filePath: String = ""
-    @State private var fileContent: String = ""
-    @State private var showPicker = false
-    @State private var isModelLoaded = false
-    @State private var progress: Float = 0.0
-    //let greet = Greeting().greet()
-    let inference = Inference_iosKt.createInference()
+    
+    @State private var viewModel = ContentViewModel()
+    
     var body: some View {
         VStack {
-            ChatView(
-                inference: inference,
-                isModelLoaded: $isModelLoaded,
-                progress: $progress
-            )
+            ChatView(viewModel: viewModel)
             
-            if !isModelLoaded {
+            if !viewModel.isModelLoaded {
                 Button("Pick model") {
-                    showPicker = true
+                    viewModel.showPicker(show: true)
                 }
-                .sheet(isPresented: $showPicker) {
+                .sheet(isPresented: $viewModel.showPicker) {
                     DocumentPicker { url in
-                        // Access the file's absolute path
-                        filePath = url.path
-                        print("Path: \(filePath)")
-                        // Load the file's content
-                        
+                        viewModel.setFilePath(path: url.path)
                     }
                 }
-                if !filePath.isEmpty{
+                if !viewModel.filePath.isEmpty {
                     Button("Load model") {
-                        Task{
-                            let modelSettings = ModelSettings(modelPath: filePath,
-                                                              numberOfGpuLayers: 20,
-                                                              useMmap: true,
-                                                              useMlock: true,
-                                                              numberOfThreads: -1,
-                                                              context: 2048,
-                                                              batchSize: 512)
-                            isModelLoaded = inference.preloadModel(
-                                modelSettings: modelSettings,
-                                progressCallback: { progress in
-                                print("Progress: \(progress)")
-
-                                    return true
-                                }
-                            )
-                            print("Model loaded: \(isModelLoaded)")
-                        }
+                        viewModel.loadModel()
                     }
                 }
+                ProgressView(value: viewModel.progress)
+                    .progressViewStyle(LinearProgressViewStyle())
+                    .padding()
             }
-            
-            
-//            if isModelLoaded{
-//                Button("Test Generation") {
-//                    inference.generate(prompt: "What is democracy", maxTokens: 100, onGenerate: { text in print(text) })
-//                    print("Model loaded: \(isModelLoaded)")
-//                }
-//            }
+        
         }
-    }
-}
-
-struct ContentView_Previews: PreviewProvider {
-    static var previews: some View {
-        ContentView()
     }
 }

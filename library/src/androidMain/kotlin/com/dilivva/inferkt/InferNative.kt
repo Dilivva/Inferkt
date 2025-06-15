@@ -2,16 +2,25 @@ package com.dilivva.inferkt
 
 
 interface Callback {
-    fun onGeneration(text: String)
+    fun onGeneration(text: String, event: Int)
+    fun onProgressCallback(progress: Float)
 }
+
+
 
 
 external fun init(): Long
 
-external fun loadModel(inferencePtr: Long, path: String): Boolean
+external fun loadModel(inferencePtr: Long, path: String, numberOfGpu: Int, useMmap: Boolean, useMlock: Boolean, callback: Callback): Boolean
 
-external fun setSamplingParams(inferencePtr: Long, temp: Float, topP: Float,  topK: Int)
+external fun setSamplingParams(inferencePtr: Long, temp: Float, topP: Float, minP: Float, topK: Int)
 
-external fun setContextParams(inferencePtr: Long, contextWindow: Int, batch: Int)
+external fun setContextParams(inferencePtr: Long, contextWindow: Int, batch: Int, numberOfThreads: Int): Boolean
 
-external fun generate(inferencePtr: Long, prompt: String, maxGenerationCount: Int, callback: Callback)
+external fun completion(inferencePtr: Long, prompt: String, maxGenerationCount: Int, callback: Callback)
+
+external fun chat(inferencePtr: Long, prompt: String, maxGenerationCount: Int, callback: Callback)
+
+external fun getModelDetails(path: String): ModelDetails
+
+external fun cancelGeneration(inferencePtr: Long)

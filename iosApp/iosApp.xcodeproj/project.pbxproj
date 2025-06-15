@@ -12,6 +12,7 @@
 		2152FB042600AC8F00CF470E /* iOSApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2152FB032600AC8F00CF470E /* iOSApp.swift */; };
 		7555FF83242A565900829871 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7555FF82242A565900829871 /* ContentView.swift */; };
 		C7071CAB2D550BA1006FE0B1 /* ChatUI.swift in Sources */ = {isa = PBXBuildFile; fileRef = C7071CAA2D550BA1006FE0B1 /* ChatUI.swift */; };
+		C7109F0B2DFF188800B74283 /* ContentViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C7109F0A2DFF188800B74283 /* ContentViewModel.swift */; };
 		C78FF19D2D47F8AD005BA227 /* DocumentPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = C78FF19C2D47F8AD005BA227 /* DocumentPicker.swift */; };
 		C7BA8F042D4FFD8200D3F955 /* Accelerate.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C7BA8F032D4FFD8200D3F955 /* Accelerate.framework */; };
 		C7BA8F062D4FFD9800D3F955 /* Metal.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C7BA8F052D4FFD9800D3F955 /* Metal.framework */; };
@@ -38,6 +39,7 @@
 		7555FF82242A565900829871 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		7555FF8C242A565B00829871 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		C7071CAA2D550BA1006FE0B1 /* ChatUI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatUI.swift; sourceTree = "<group>"; };
+		C7109F0A2DFF188800B74283 /* ContentViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentViewModel.swift; sourceTree = "<group>"; };
 		C78FF19C2D47F8AD005BA227 /* DocumentPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentPicker.swift; sourceTree = "<group>"; };
 		C7BA8F032D4FFD8200D3F955 /* Accelerate.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Accelerate.framework; path = System/Library/Frameworks/Accelerate.framework; sourceTree = SDKROOT; };
 		C7BA8F052D4FFD9800D3F955 /* Metal.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Metal.framework; path = System/Library/Frameworks/Metal.framework; sourceTree = SDKROOT; };
@@ -91,6 +93,7 @@
 				058557D7273AAEEB004C7B11 /* Preview Content */,
 				C78FF19C2D47F8AD005BA227 /* DocumentPicker.swift */,
 				C7071CAA2D550BA1006FE0B1 /* ChatUI.swift */,
+				C7109F0A2DFF188800B74283 /* ContentViewModel.swift */,
 			);
 			path = iosApp;
 			sourceTree = "<group>";
@@ -200,6 +203,7 @@
 				C7071CAB2D550BA1006FE0B1 /* ChatUI.swift in Sources */,
 				C78FF19D2D47F8AD005BA227 /* DocumentPicker.swift in Sources */,
 				7555FF83242A565900829871 /* ContentView.swift in Sources */,
+				C7109F0B2DFF188800B74283 /* ContentViewModel.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

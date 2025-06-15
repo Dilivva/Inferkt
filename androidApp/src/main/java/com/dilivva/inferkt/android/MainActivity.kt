@@ -21,6 +21,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -35,7 +36,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.dilivva.inferkt.Greeting
+import com.dilivva.inferkt.GenerationEvent
+import com.dilivva.inferkt.ModelSettings
+import com.dilivva.inferkt.SamplingSettings
 import com.dilivva.inferkt.createInference
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -45,8 +48,9 @@ import java.util.UUID
 class MainActivity : ComponentActivity() {
 
     init {
-        System.loadLibrary("infer-android")
-        //CpuUtils.loadLibrary()
+        //System.loadLibrary("infer-android")
+        CpuUtils.loadLibrary()
+        //System.loadLibrary("inferkt")
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -56,7 +60,7 @@ class MainActivity : ComponentActivity() {
                 Column (
                     modifier = Modifier.fillMaxSize(),
                 ) {
-                    GreetingView(Greeting().greet())
+                    GreetingView()
                 }
             }
         }
@@ -64,7 +68,7 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun GreetingView(text: String) {
+fun GreetingView() {
     val context = LocalContext.current
     val path = remember {
         val mediaDir = context.externalMediaDirs.firstOrNull()?.let { parent ->
@@ -92,6 +96,10 @@ fun GreetingView(text: String) {
 
     var prompt by remember {
         mutableStateOf("")
+    }
+
+    LaunchedEffect(Unit) {
+        inference.setSamplingParams(SamplingSettings())
     }
 
     Column(modifier = Modifier.fillMaxSize().background(Color.White)){
@@ -143,8 +151,16 @@ fun GreetingView(text: String) {
                 modifier = Modifier.fillMaxWidth().height(40.dp),
                 onClick = {
                     scope.launch(Dispatchers.IO){
-                        println("Loading model")
-                        isLoaded = inference.preloadModel(path)
+                        //println("Loading model")
+                        val modelSettings = ModelSettings(
+                            modelPath = path,
+                            numberOfGpuLayers = 99,
+                            numberOfThreads = 0
+                        )
+                        isLoaded = inference.preloadModel(modelSettings){
+                            println("Progress: $it")
+                            true
+                        }
                     }
 
                 }
@@ -164,9 +180,16 @@ fun GreetingView(text: String) {
                         val botmessage = ChatMessage(message = mutableStateOf("Loading..."), type = ChatMessage.Type.Bot, id = chatId)
                         messages = messages + botmessage
                         println("Sending: $chatId")
-                       inference.generate(prompt, 500){
-                           botmessage.message.value += it
-                           //messages = messages.dropLast(1) + (messages.last() + it)
+                       inference.chat(prompt, 500){
+                           when(it){
+                               is GenerationEvent.Error -> println("Error: ${it.error.name}")
+                               GenerationEvent.Generated -> println("Generated")
+                               is GenerationEvent.Generating -> {
+                                   botmessage.message.value += it.text
+                               }
+                               GenerationEvent.Loading -> println("Loading")
+                           }
+
                         }
                     }
                 }
@@ -183,8 +206,13 @@ fun GreetingView(text: String) {
         onClick = {
             scope.launch(Dispatchers.IO){
                 println("Loading model")
-                val model = inference.preloadModel(path)
-                println("Model: $model")
+                val modelSettings = ModelSettings(
+                    modelPath = path
+                )
+                isLoaded = inference.preloadModel(modelSettings){
+                    println("Progress: $it")
+                    true
+                }
             }
 
     }) {

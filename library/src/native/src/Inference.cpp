@@ -4,19 +4,18 @@
 
 #include "Inference.h"
 
-#include <gguf.h>
-#include <inferkt.h>
+#include "gguf.h"
+#include "inferkt.h"
 #include <iostream>
-#include <llama-impl.h>
-#include <llama-kv-cache.h>
-#include <llama-model.h>
+#include "llama-impl.h"
+#include "llama-kv-cache.h"
+#include "llama-model.h"
 #include <thread>
 #include <unistd.h>
 
 #include "common.h"
 
 Inference::Inference() {
-    printf("Inference::Inference()\n");
     llama_backend_init();
 }
 
@@ -25,14 +24,16 @@ Inference::~Inference() {
 }
 
 bool Inference::load_model(const model_settings &settings) {
+    if (model){
+        reset();
+    }
     llama_model_params model_params = llama_model_default_params();
     model_params.n_gpu_layers = settings.number_of_gpu_layers;
     model_params.use_mmap = settings.use_mmap;
     model_params.use_mlock = settings.use_mlock;
     model_params.progress_callback = settings.callback;
     model_params.progress_callback_user_data = settings.progress_callback_user_data;
-
-    model = llama_model_load_from_file(settings.model_path.c_str(), model_params);
+    model = llama_model_load_from_file(settings.model_path, model_params);
     if (!model) {
         clean_up();
         return false;
@@ -41,23 +42,17 @@ bool Inference::load_model(const model_settings &settings) {
 }
 
 bool Inference::init_context(int context_length, int n_batch, int number_of_threads) {
-
-    int max_threads = std::thread::hardware_concurrency();
-    // Use 2 threads by default on 4-core devices, 4 threads on more cores
-    int default_n_threads = max_threads == 4 ? 2 : std::min(4, max_threads);
-    llama_context_params ctx_params = llama_context_default_params();
-    ctx_params.n_ctx = context_length;  // Context window size
-    ctx_params.n_batch = n_batch;
-    ctx_params.n_ubatch = n_batch;
-    ctx_params.n_threads = default_n_threads;
-    ctx_params.n_threads_batch = default_n_threads;
+    llama_context_params ctx_param = llama_context_default_params();
+    ctx_param.n_ctx = context_length;
+    ctx_param.n_batch = n_batch;
+    ctx_param.n_ubatch = n_batch;
+    ctx_param.n_threads = number_of_threads;
+    ctx_param.n_threads_batch = number_of_threads;
 
     // Create context
-    ctx = llama_init_from_model(model, ctx_params);
+    ctx = llama_init_from_model(model, ctx_param);
     vocab = llama_model_get_vocab(model);
     formatted.resize(llama_n_ctx(ctx));
-
-    //n_keep = settings.context / 2;
 
     return ctx != nullptr && vocab != nullptr;
 }
@@ -68,7 +63,7 @@ model_details Inference::get_model_details(const model_settings &settings) {
         false,
         nullptr,
    };
-    gguf_context * ctx = gguf_init_from_file(settings.model_path.c_str(), params);
+    gguf_context * ctx = gguf_init_from_file(settings.model_path, params);
     details.version = gguf_get_version(ctx);
 
     const int n_kv = gguf_get_n_kv(ctx);
@@ -91,20 +86,21 @@ model_details Inference::get_model_details(const model_settings &settings) {
 }
 
 void Inference::check_context_and_resize(int n_batch) {
-    int n_ctx = llama_n_ctx(ctx);
-    int n_ctx_used = llama_get_kv_cache_used_cells(ctx);
-    if (n_ctx_used + n_batch > n_ctx) {
-        const int n_left    = generated - n_keep;
-        const int n_discard = (n_left / 2);
+    const int n_ctx = llama_n_ctx(ctx);
+    const int n_used = llama_kv_self_used_cells(ctx);
 
-        llama_kv_cache_seq_rm (ctx, -1, 0, n_keep + n_discard);
-        //llama_kv_cache_seq_add(ctx, -1, n_keep + n_discard, generated,        -n_discard);
-        printf("Keep: %i\n", n_keep);
-        printf("Left: %i\n", n_left);
-        printf("Discard: %i\n", n_discard);
+    if (n_used + n_batch > n_ctx) {
+        const int n_discard = (n_used - n_keep) / 2;
 
-        int n_ctx_used = llama_get_kv_cache_used_cells(ctx);
-        printf("Context left: %i\n", n_ctx_used);
+        if (n_discard > 0) {
+            llama_kv_self_seq_rm(ctx, 0, n_keep, n_keep + n_discard);
+            llama_kv_self_seq_add(ctx, 0, n_keep + n_discard, n_used, -n_discard);
+
+            printf("Context resized:\n");
+            printf("  - Kept: %d tokens\n", n_keep);
+            printf("  - Discarded: %d tokens\n", n_discard);
+            printf("  - Remaining: %d tokens\n", llama_kv_self_used_cells(ctx));
+        }
     }
 }
 
@@ -122,7 +118,7 @@ void Inference::set_sampling_params(const sampling_settings settings) {
 
 
 std::vector<int32_t> Inference::initialize_batch(const std::string &prompt) {
-    delete batch;
+    llama_batch_free(batch);
     std::vector<llama_token> tokens(llama_n_ctx(ctx));
     int n_tokens = llama_tokenize(
         vocab,
@@ -135,7 +131,7 @@ std::vector<int32_t> Inference::initialize_batch(const std::string &prompt) {
     );
 
     tokens.resize(n_tokens);
-    batch = new llama_batch {
+    batch = llama_batch {
         0,
         nullptr,
         nullptr,
@@ -145,15 +141,15 @@ std::vector<int32_t> Inference::initialize_batch(const std::string &prompt) {
         nullptr,
     };
 
-    batch->token = (llama_token *) malloc(sizeof(llama_token) * n_tokens);
+    batch.token = (llama_token *) malloc(sizeof(llama_token) * n_tokens);
 
-    batch->pos      = (llama_pos *)     malloc(sizeof(llama_pos)      * n_tokens);
-    batch->n_seq_id = (int32_t *)       malloc(sizeof(int32_t)        * n_tokens);
-    batch->seq_id   = (llama_seq_id **) malloc(sizeof(llama_seq_id *) * n_tokens);
+    batch.pos      = (llama_pos *)     malloc(sizeof(llama_pos)      * n_tokens);
+    batch.n_seq_id = (int32_t *)       malloc(sizeof(int32_t)        * n_tokens);
+    batch.seq_id   = (llama_seq_id **) malloc(sizeof(llama_seq_id *) * n_tokens);
     for (int i = 0; i < n_tokens; ++i) {
-        batch->seq_id[i] = (llama_seq_id *) malloc(sizeof(llama_seq_id) * 1);
+        batch.seq_id[i] = (llama_seq_id *) malloc(sizeof(llama_seq_id) * 1);
     }
-    batch->logits   = (int8_t *)        malloc(sizeof(int8_t)         * n_tokens);
+    batch.logits   = (int8_t *)        malloc(sizeof(int8_t)         * n_tokens);
 
     return tokens;
 }
@@ -165,23 +161,23 @@ void Inference::completion(
     void* user_data) {
 
     generation_cancelled = false;
-    common_batch_clear(*batch);
+    common_batch_clear(batch);
 
     // evaluate the initial prompt
     for (auto i = 0; i < tokens.size(); i++) {
-        common_batch_add(*batch, tokens[i], i, { 0 }, false);
+        common_batch_add(batch, tokens[i], i, { 0 }, false);
     }
 
     // llama_decode will output logits only for the last token of the prompt
-    batch->logits[batch->n_tokens - 1] = true;
+    batch.logits[batch.n_tokens - 1] = true;
 
 
-    if (llama_decode(ctx, *batch)) {
+    if (llama_decode(ctx, batch)) {
         callback("", DECODE_ERROR, user_data);
     }
 
     // Generate response tokens
-    for (size_t i = batch->n_tokens; i <= max_tokens; ++i) {
+    for (size_t i = batch.n_tokens; i <= max_tokens; ++i) {
         if (generation_cancelled){
             callback("", END_OF_GENERATION, user_data);
             break;
@@ -198,10 +194,10 @@ void Inference::completion(
         callback(generated.c_str(), GENERATING, user_data);
 
         // Prepare batch for next token
-        common_batch_clear(*batch);
-        common_batch_add(*batch, new_token_id, i, { 0 }, true);
+        common_batch_clear(batch);
+        common_batch_add(batch, new_token_id, i, { 0 }, true);
 
-        if (llama_decode(ctx, *batch)) {
+        if (llama_decode(ctx, batch)) {
             callback("", DECODE_ERROR, user_data);
             break;
         }
@@ -236,7 +232,7 @@ void Inference::chat(
 
         std::string response;
 
-        const bool is_first = llama_get_kv_cache_used_cells(ctx) == 0;
+        const bool is_first = llama_kv_self_used_cells(ctx) == 0;
 
         // tokenize the prompt
         const int n_prompt_tokens = -llama_tokenize(vocab, prompt.c_str(), prompt.size(), NULL, 0, is_first, true);
@@ -260,7 +256,7 @@ void Inference::chat(
 
             // check if we have enough space in the context to evaluate this batch
             int n_ctx = llama_n_ctx(ctx);
-            int n_ctx_used = llama_get_kv_cache_used_cells(ctx);
+            int n_ctx_used = llama_kv_self_used_cells(ctx);
             if (n_ctx_used + batch.n_tokens > n_ctx) {
                 callback("", CONTEXT_EXCEEDED_ERROR, user_data);
                 break;
@@ -317,17 +313,22 @@ void Inference::cancel() {
 }
 
 
-void Inference::clean_up() const {
-    for (auto & msg : messages) {
-        free(const_cast<char *>(msg.content));
-    }
+void Inference::clean_up() {
     llama_backend_free();
+    reset();
+}
+
+void Inference::reset() {
+    if (!messages.empty()) {
+        for (auto &msg: messages) {
+            free(const_cast<char *>(msg.content));
+        }
+    }
     if (ctx) llama_free(ctx);
     if (model) llama_model_free(model);
     if (smpl) llama_sampler_free(smpl);
-    delete batch;
+    llama_batch_free(batch);
 }
-
 
 
 

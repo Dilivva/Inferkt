@@ -26,6 +26,7 @@ object IosInference: Inference{
 
     private val inferencePtr = init()
     private lateinit var modelSettings: ModelSettings
+    private var appliedContext = false
 
     override fun preloadModel(modelSettings: ModelSettings, progressCallback: (Float) -> Boolean): Boolean {
         this.modelSettings = modelSettings
@@ -45,17 +46,17 @@ object IosInference: Inference{
             callback = callback,
             user_data = onProgressRef.asCPointer()
         )
+        println("Model loaded?: $isModelLoaded")
+        if (!isModelLoaded) return false
 
+        onProgressRef.dispose()
         println("Setting context")
-        set_context_params(
+        return set_context_params(
             inference_ptr = inferencePtr,
             context_length = modelSettings.context,
             batch = modelSettings.batchSize,
             number_of_threads = modelSettings.numberOfThreads
         )
-
-        onProgressRef.dispose()
-        return isModelLoaded
     }
     
 

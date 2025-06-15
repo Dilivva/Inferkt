@@ -4,6 +4,7 @@ project("infer-android")
 
 add_subdirectory(../../native ../../native/build)
 
+
 function(build_library target_name cpu_flags)
     message("Building for: ${target_name}, ${cpu_flags}")
     add_library(
@@ -11,10 +12,9 @@ function(build_library target_name cpu_flags)
             SHARED
             infer-android.cpp
     )
-
     target_link_libraries(${target_name} inferkt log android)
 
-    target_compile_options(inferkt PRIVATE -DGGML_USE_CPU -DGGML_USE_CPU_AARCH64 -pthread)
+    target_compile_options(inferkt PRIVATE -DLM_GGML_USE_CPU -DLM_GGML_USE_CPU_AARCH64 -pthread)
 
 
     target_compile_options(inferkt PRIVATE -O3 -DNDEBUG)
@@ -30,6 +30,7 @@ if (${ANDROID_ABI} STREQUAL "arm64-v8a")
     build_library("inferkt_v8" "-march=armv8-a")
     build_library("inferkt_v8_2" "-march=armv8.2-a")
     build_library("inferkt_v8_2_dotprod" "-march=armv8.2-a+dotprod")
+    build_library("inferkt_v8_2_f16_dotprod" "-march=armv8.2-afp16+dotprod")
     build_library("inferkt_v8_2_i8mm" "-march=armv8.2-a+i8mm")
     build_library("inferkt_v8_2_dotprod_i8mm" "-march=armv8.2-a+dotprod+i8mm")
 
@@ -41,6 +42,6 @@ if (${ANDROID_ABI} STREQUAL "arm64-v8a")
 
 elseif (${ANDROID_ABI} STREQUAL "x86_64")
     # x86_64 target
-    build_library("rnllama_x86_64" "-march=x86-64" "-mtune=intel" "-msse4.2" "-mpopcnt")
+    build_library("inferkt_x86_64" "-march=x86-64" "-mtune=intel" "-msse4.2" "-mpopcnt")
 
 endif ()

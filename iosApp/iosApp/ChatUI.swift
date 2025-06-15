@@ -16,21 +16,16 @@ struct ChatMessage: Identifiable {
     let isUser: Bool  // true if the message is from the user, false for a received message
 }
 
+@available(iOS 17.0, *)
 struct ChatView: View {
-    let inference: Inference
-    @Binding var isModelLoaded: Bool
-    @Binding var progress: Float
     
-    
-    @State private var messages: [ChatMessage] = []
-    @State private var inputText: String = ""
-    @State private var isGenerating: Bool = false
+    @Bindable var viewModel: ContentViewModel
     
     var body: some View {
         VStack {
             // Message List
             ScrollViewReader { scrollView in
-                List(messages) { message in
+                List(viewModel.messages) { message in
                     HStack {
                         if message.isUser {
                             Spacer()  // Push user messages to the right
@@ -54,9 +49,15 @@ struct ChatView: View {
                 }
                 .listStyle(PlainListStyle())
                 // Scroll to the bottom when a new message is added.
-                .onChange(of: messages.count) { _ in
+                .onChange(of: viewModel.messages.count) { _ in
                     
-                    if let lastMessage = messages.last {
+                    if let lastMessage = viewModel.messages.last {
+                        withAnimation {
+                            scrollView.scrollTo(lastMessage.id, anchor: .bottom)
+                        }
+                    }
+                }.onChange(of: viewModel.messages.last?.text){
+                    if let lastMessage = viewModel.messages.last {
                         withAnimation {
                             scrollView.scrollTo(lastMessage.id, anchor: .bottom)
                         }
@@ -68,12 +69,12 @@ struct ChatView: View {
             
             // Input Field and Send Button
             HStack {
-                TextField("Enter message...", text: $inputText)
+                TextField("Enter message...", text: $viewModel.inputText)
                     .textFieldStyle(RoundedBorderTextFieldStyle())
                     .frame(minHeight: CGFloat(40))
                 
-                if isGenerating {
-                    Button(action: stop) {
+                if viewModel.isGenerating {
+                    Button(action: viewModel.stopGenerating) {
                         Text("Stop")
                             .bold()
                             .padding(.horizontal)
@@ -83,7 +84,7 @@ struct ChatView: View {
                             .cornerRadius(8)
                     }
                 }else{
-                    Button(action: sendMessage) {
+                    Button(action: viewModel.sendMessage) {
                         Text("Send")
                             .bold()
                             .padding(.horizontal)
@@ -100,51 +101,5 @@ struct ChatView: View {
 //                .padding()
         }
     }
-    
-    func stop(){
-        inference.cancelGeneration()
-    }
-    
-    // Function to handle sending a message.
-    func sendMessage() {
-        if !isModelLoaded { return }
-        guard !inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
-        
-        print(inputText)
-        
-        // Append the user's message.
-        let userMessage = ChatMessage(text: inputText, isUser: true)
-        messages.append(userMessage)
-        
-        var botMessage = ChatMessage(text: "Loading..\n\n", isUser: false)
-        messages.append(botMessage)
-        
-        let botMessageIndex = messages.count - 1
-        let prompt = inputText
-        inputText = ""
-        Task {
-            print("Gene")
-            inference.chat(
-                prompt: prompt,
-                maxTokens: 100,
-                onGenerate: { event in
-                    // Make sure updates to UI state happen on the main actor.
-                    Task { @MainActor in
-                        switch event{
-                        case let generating as GenerationEventGenerating:
-                            isGenerating = true
-                            messages[botMessageIndex].text += generating.text
-                        case let error as GenerationEventError:
-                            isGenerating = false
-                            print("Error: \(error.error)")
-                        case is GenerationEventGenerated:
-                            isGenerating = false
-                        default:
-                            print("None")
-                        }
-                    }
-                }
-            )
-        }
-    }
+
 }
