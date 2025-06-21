@@ -1,7 +1,5 @@
 package com.dilivva.inferkt
 
-import java.io.FileInputStream
-
 actual fun createInference(): Inference {
     return AndroidInference
 }
@@ -22,7 +20,6 @@ object AndroidInference: Inference{
                 progressCallback(progress)
             }
         }
-        println("Model: $modelSettings")
         val isModelLoaded = loadModel(
             inferencePtr = inferPtr,
             path = modelSettings.modelPath,
@@ -85,6 +82,10 @@ object AndroidInference: Inference{
 
     override fun getModelDetails(path: String): ModelDetails {
         return com.dilivva.inferkt.getModelDetails(path)
+    }
+
+    override fun release() {
+        cleanUp(inferPtr)
     }
 
     private fun inference(

@@ -59,7 +59,6 @@ void cxx_complete(const long inference_ptr, const char *prompt, const int max_ge
 
 extern "C" void clean_up(const long inference_ptr) {
     const auto inference = reinterpret_cast<Inference *>(inference_ptr);
-    inference->clean_up();
     delete inference;
 }
 

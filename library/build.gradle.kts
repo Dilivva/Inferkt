@@ -46,14 +46,14 @@ kotlin {
 
 android {
     namespace = "com.dilivva.inferkt"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         minSdk = 24
 
         externalNativeBuild {
             cmake {
-                arguments("-DBUILD_SHARED_LIBS=OFF","-DLLAMA_BUILD_COMMON=ON","-DGGML_LLAMAFILE=OFF","-DGGML_OPENMP=OFF","-DCMAKE_BUILD_TYPE=Release")
+                arguments("-DLLAMA_BUILD_COMMON=ON","-DGGML_LLAMAFILE=OFF","-DGGML_OPENMP=OFF","-DCMAKE_BUILD_TYPE=Release")
             }
         }
         ndk {

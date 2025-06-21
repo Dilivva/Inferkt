@@ -14,7 +14,7 @@ function(build_library target_name cpu_flags)
     )
     target_link_libraries(${target_name} inferkt log android)
 
-    target_compile_options(inferkt PRIVATE -DLM_GGML_USE_CPU -DLM_GGML_USE_CPU_AARCH64 -pthread)
+    target_compile_options(inferkt PRIVATE -DGGML_USE_CPU -DGGML_USE_CPU_AARCH64 -pthread)
 
 
     target_compile_options(inferkt PRIVATE -O3 -DNDEBUG)

@@ -20,29 +20,16 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-package com.dilivva.inferkt
+package com.dilivva.inferkt.android
 
-/**
- * Configuration settings for the language model.
- *
- * @property modelPath The file path to the language model.
- * @property numberOfGpuLayers The number of GPU layers to use for computation. Defaults to 0 (CPU only).
- * @property useMmap Whether to use memory mapping for model loading. Defaults to true.
- * @property useMlock Whether to lock the model in memory. Defaults to half of the total threads.
- * @property numberOfThreads The number of threads to use for inference. Defaults to -1 (auto-detect).
- * @property context The context window size for the model. Defaults to 512. Setting higher context sizes may result in out-of-memory errors.
- * @property batchSize The batch size for processing. Defaults to 512.
- */
-data class ModelSettings(
-    val modelPath: String,
-    val numberOfGpuLayers: Int = 0,
-    val useMmap: Boolean = true,
-    val useMlock: Boolean = true,
-    val numberOfThreads: Int = -1,
-    val context: Int = 512,
-    val batchSize: Int = 512
-)
+import androidx.compose.runtime.MutableState
 
-
-
-
+data class ChatMessage(
+    val message: MutableState<String>,
+    val type: Type,
+    val id: String
+){
+    enum class Type{
+        User, Bot
+    }
+}

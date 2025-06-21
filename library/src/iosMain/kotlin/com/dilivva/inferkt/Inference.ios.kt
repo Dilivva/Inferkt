@@ -1,5 +1,6 @@
 package com.dilivva.inferkt
 
+import dilivva.clean_up
 import dilivva.generation_event
 import dilivva.init
 import dilivva.load_model
@@ -26,7 +27,6 @@ object IosInference: Inference{
 
     private val inferencePtr = init()
     private lateinit var modelSettings: ModelSettings
-    private var appliedContext = false
 
     override fun preloadModel(modelSettings: ModelSettings, progressCallback: (Float) -> Boolean): Boolean {
         this.modelSettings = modelSettings
@@ -46,11 +46,9 @@ object IosInference: Inference{
             callback = callback,
             user_data = onProgressRef.asCPointer()
         )
-        println("Model loaded?: $isModelLoaded")
         if (!isModelLoaded) return false
 
         onProgressRef.dispose()
-        println("Setting context")
         return set_context_params(
             inference_ptr = inferencePtr,
             context_length = modelSettings.context,
@@ -87,8 +85,6 @@ object IosInference: Inference{
     }
 
     override fun chat(prompt: String, maxTokens: Int, onGenerate: (GenerationEvent) -> Unit) {
-
-        setSamplingParams(SamplingSettings())
         inference(
             onGenerate = onGenerate,
             onOperation = { ref, callback ->
@@ -116,6 +112,10 @@ object IosInference: Inference{
                 contextLength = context_length?.toKString().orEmpty()
             )
         }
+    }
+
+    override fun release() {
+        clean_up(inferencePtr)
     }
 
     private fun inference(
@@ -155,7 +155,6 @@ object IosInference: Inference{
         }
         onOperation(onGenerateRef, callback)
         onGenerateRef.dispose()
-        println("After op")
     }
 
 }

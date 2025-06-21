@@ -24,3 +24,5 @@ external fun chat(inferencePtr: Long, prompt: String, maxGenerationCount: Int, c
 external fun getModelDetails(path: String): ModelDetails
 
 external fun cancelGeneration(inferencePtr: Long)
+
+external fun cleanUp(inferencePtr: Long)

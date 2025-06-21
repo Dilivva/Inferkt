@@ -1,6 +1,4 @@
-//
-// Created by Ayodele Kehinde on 14/01/2025.
-//
+
 
 #include <android/log.h>
 #include <jni.h>
@@ -199,4 +197,9 @@ extern "C"
 JNIEXPORT void JNICALL
 Java_com_dilivva_inferkt_InferNativeKt_cancelGeneration(JNIEnv *env,jclass clazz,jlong inference_ptr) {
     cancel_inference(inference_ptr);
+}
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_dilivva_inferkt_InferNativeKt_cleanUp(JNIEnv *env, jclass clazz, jlong inference_ptr) {
+    clean_up(inference_ptr);
 }

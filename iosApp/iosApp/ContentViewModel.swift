@@ -52,6 +52,7 @@ import library
                     return true
                 }
             )
+            current.inference.setSamplingParams(samplingSettings: SamplingSettings(temp: 0.2, topP: 0.95, minP: 0.05, topK: 40))
             DispatchQueue.main.async {
                 current.isModelLoaded = loaded
             }

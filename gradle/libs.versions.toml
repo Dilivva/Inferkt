@@ -26,6 +26,7 @@ androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "j
 androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
 androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
 material = { group = "com.google.android.material", name = "material", version.ref = "material" }
+compose-viewmodel = "androidx.lifecycle:lifecycle-viewmodel-compose:2.9.1"
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }
