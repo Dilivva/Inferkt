@@ -14,11 +14,8 @@ jobs:
         with:
           distribution: 'zulu'
           java-version: 21
-      - name: Check
-        run: pwd
-#      - name: Build ios Artifacts
-#        run: cd library/src/native && sh build-ios.sh
-#
+      - name: Build ios Artifacts
+        run: cd library/src/native && sh build-ios.sh
       - name: Publish to MavenCentral
         run: >
           ./gradlew publishToMavenCentral
