@@ -14,11 +14,10 @@ jobs:
         with:
           distribution: 'zulu'
           java-version: 21
-      - name: Build ios Artifacts
-        run: cd library/src/native && sh build-ios.sh
+#      - name: Build ios Artifacts
+#        run: cd library/src/native && sh build-ios.sh
       - name: Publish to MavenCentral
         run: >
-          cd ~ && pwd &&
           ./gradlew publishToMavenCentral
           -PVERSION_NAME=${{ github.ref_name }}
           -PmavenCentralUsername=${{ secrets.MAVEN_USERNAME }}
