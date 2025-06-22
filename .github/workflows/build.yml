@@ -1,0 +1,30 @@
+
+name: Build
+on:
+  push:
+jobs:
+  publish:
+    name: Release build and publish
+    runs-on: macOS-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: 21
+      - name: Build ios Artifacts
+        run: cd library/src/native && sh build-ios.sh
+      - name: Publish to MavenCentral
+        run: >
+          ./gradlew publishToMavenCentral
+          -PVERSION_NAME=0.0.1-SNAPSHOT
+          -PmavenCentralUsername=${{ secrets.MAVEN_USERNAME }}
+          -PmavenCentralPassword=${{ secrets.MAVEN_PASSWORD }}
+          -PsigningInMemoryKeyPassword=${{ secrets.SIGNING_PASSWORD }}
+        env:
+          MAVEN_USERNAME: ${{ secrets.MAVEN_USERNAME }}
+          MAVEN_PASSWORD: ${{ secrets.MAVEN_PASSWORD }}
+          ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.SIGNING_KEY }}
+          SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
