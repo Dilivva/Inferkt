@@ -6,3 +6,11 @@ plugins {
     alias(libs.plugins.kotlinMultiplatform).apply(false)
     alias(libs.plugins.compose.compiler).apply(false)
 }
+
+tasks.register("plint"){
+    doFirst {
+        val key = project.findProperty("signingInMemoryKey")
+        println("Key: $key")
+
+    }
+}
