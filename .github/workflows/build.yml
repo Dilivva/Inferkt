@@ -15,7 +15,7 @@ jobs:
           distribution: 'zulu'
           java-version: 21
       - name: Build ios Artifacts
-        run: ./gradlew plint #cd library/src/native && sh build-ios.sh
+        run: ./gradlew -PsigningInMemoryKey=${{ secrets.SIGNING_KEY }} plint #cd library/src/native && sh build-ios.sh
       - name: Publish to MavenCentral
         run: >
           ./gradlew publishToMavenCentral
