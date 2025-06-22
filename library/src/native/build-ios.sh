@@ -20,7 +20,7 @@ function build_framework() {
 
 }
 
-rm -rf build-ios
+#rm -rf build-ios
 
 build_framework "iphoneos" "arm64"
 build_framework "iphonesimulator" "arm64;x86_64"
