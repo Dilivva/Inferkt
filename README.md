@@ -8,7 +8,7 @@
 
 ## How to use
 
-> This library is experimental and my be subject to change.
+> This library is experimental and api may be subject to change.
 
 ### Add the dependency
 
@@ -22,7 +22,7 @@
        }
     }
 ```
-> On iOS: Add **Accelerate.framework** and **Metal.framework** to your project on **Xcode**.
+ On iOS: Add **Accelerate.framework** and **Metal.framework** to your project on **Xcode**.
 
 2. Explore API in common code: 
 
@@ -40,17 +40,17 @@ val modelSettings = ModelSettings(
     val context: Int = 512, //context window size for the model. Defaults to 512. Setting higher context sizes may result in out-of-memory errors.
     val batchSize: Int = 512 
 )
-inference.preloadModel(modelSettings =  modelSettings, progressCallback: { true })
+inference.preloadModel(modelSettings =  modelSettings, progressCallback: { progress: Float -> true })
 
 //Set sampling settings you can tune the model before each inference:
 val samplingSettings = SamplingSettings(..)
 inference.setSamplingParams(samplingSettings)
 
 //Completion
-inference.completion(prompt: "I am a nice cat:", maxTokens: 100, onGenerate: {})
+inference.completion(prompt: "I am a nice cat:", maxTokens: 100, onGenerate: { event: GenerationEvent -> })
 
 //Chat
-inference.chat(prompt: "Tell me a joke about Kotlin", maxTokens: 100, onGenerate: {})
+inference.chat(prompt: "Tell me a joke about Kotlin", maxTokens: 100, onGenerate: { event: GenerationEvent -> })
 
 //Observe events:
 when(event){
@@ -66,9 +66,9 @@ when(event){
 
 [llama.cpp](https://github.com/ggml-org/llama.cpp): for their awesome work on local inference.
 
-[llama.rn](https://github.com/mybigday/llama.rn): inspired the build process for mobile.
+[llama.rn](https://github.com/mybigday/llama.rn): inspired the build process implemented in this project.
 
-[Kotlin Multiplatform](https://www.jetbrains.com/help/kotlin-multiplatform-dev/get-started.html)
+[Kotlin Multiplatform](https://www.jetbrains.com/help/kotlin-multiplatform-dev/get-started.html): awesome cross-platform framework.
 
 
 
