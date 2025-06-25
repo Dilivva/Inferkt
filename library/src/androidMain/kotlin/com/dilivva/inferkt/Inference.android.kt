@@ -6,6 +6,9 @@ actual fun createInference(): Inference {
 
 object AndroidInference: Inference{
 
+    init {
+        System.loadLibrary("inferkt-android")
+    }
     private val inferPtr = init()
     private lateinit var modelSettings: ModelSettings
 
@@ -109,5 +112,4 @@ object AndroidInference: Inference{
         }
         onOperation(callback)
     }
-
 }

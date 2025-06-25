@@ -27,6 +27,7 @@ androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-co
 androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
 material = { group = "com.google.android.material", name = "material", version.ref = "material" }
 compose-viewmodel = "androidx.lifecycle:lifecycle-viewmodel-compose:2.9.1"
+infer = { module = "com.dilivva:inferkt", version = "0.0.1" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }
