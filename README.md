@@ -22,8 +22,7 @@
        }
     }
 ```
-    On iOS:
-    Add **Accelerate.framework** and **Metal.framework** to your project on **Xcode**.
+> On iOS: Add **Accelerate.framework** and **Metal.framework** to your project on **Xcode**.
 
 2. Explore API in common code: 
 
